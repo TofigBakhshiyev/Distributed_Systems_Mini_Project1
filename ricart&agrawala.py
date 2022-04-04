@@ -18,6 +18,50 @@ listOfPorts = []
 criticalSectionResource = "Hello"
 isCriticalSectionEmpty = False
 
+
+class Process(threading.Thread):
+    def __init__(self, id, data, state, timestamp, time_out, server):
+        # creating server with thread in background
+        threading.Thread.__init__(self, target=server.start)
+        self.id = id
+        self.data = None
+        self.state = state
+        self.timestamp = timestamp
+        self.time_out = time_out
+        self.server = server
+
+    def exitCS(self):
+        global isCriticalSectionEmpty
+        self.state = "DO-NOT-WANT"
+        self.data = criticalSectionResource
+        isCriticalSectionEmpty = False
+        self.timestamp = int(datetime.datetime.now().second)
+        del queueForTimestamp[self.id]
+
+    def criticalSection(self):
+        self.state = "HELD"
+        global isCriticalSectionEmpty
+        cs_time = random.randint(critical_section_time[0], critical_section_time[1])
+        isCriticalSectionEmpty = True
+        threading.Timer(cs_time, self.exitCS).start()
+
+    def changeState(self):
+        index = states.index(self.state)
+        if index != 0 and index != 1:
+            self.state = states[index-1]
+            self.timestamp = int(datetime.datetime.now().second)
+            # asking from other threads if it is okay via rypc
+            answers = connectThreads_GetState(self.id)
+            queueForTimestamp[self.id] = (self.id + self.timestamp + self.time_out)
+            if 'NO' not in answers and isCriticalSectionEmpty == False:
+                self.timestamp = int(datetime.datetime.now().second)
+                self.state = states[index-2]
+                self.criticalSection()
+        
+    def changeStateAfterTimeOut(self):
+        threading.Timer(self.time_out, self.changeState).start()
+
+
 # Service for threads
 class Service(rpyc.Service):
     def exposed_get_status(self, id):
