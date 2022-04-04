@@ -96,7 +96,7 @@ def accessCSFromQeueu():
 
 def listPorcesses():
     for t in range(len(processes)):
-        print(f"P{processes[t].id}, {processes[t].state}, {processes[t].timestamp}, {processes[t].time_out}") 
+        print(f"P{processes[t].id}, {processes[t].state}") 
 
 # connecting threads through rypc and getting OK or NOT reply
 def connectThreads_GetState(client_id):
